@@ -597,6 +597,13 @@ Implement `all-completions' interface with additional fuzzy / `flx' scoring."
 ;; (@* "Scoring & Highlighting" )
 ;;
 
+(defun fussy--collect-orderless-matches (str)
+  (let ((matches nil))
+    (dotimes (i (length str))
+     (when (get-text-property i 'face str)
+       (push (substring str i (1+ i)) matches)))
+    (apply 'concat (reverse matches))))
+
 (defun fussy-score (candidates string &optional cache)
   "Score and propertize CANDIDATES using STRING.
 
@@ -614,7 +621,7 @@ Set a text-property \='completion-score on candidates with their score.
         (let ((score (funcall fussy-score-fn
                               x
                               (if (fussy--orderless-p)
-                                  (replace-regexp-in-string "\\\s" "" string)
+                                  (fussy--collect-orderless-matches x)
                                 string)
                               cache)))
           ;; (message
