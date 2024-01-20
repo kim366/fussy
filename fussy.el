@@ -597,6 +597,29 @@ Implement `all-completions' interface with additional fuzzy / `flx' scoring."
 ;; (@* "Scoring & Highlighting" )
 ;;
 
+(defun fussy--merge-query-for-scoring (query str)
+  (let ((query-words (split-string query orderless-component-separator)))
+    (mapconcat (lambda (i) (nth i query-words)) (fussy--query-indices-in-orderless-completion str))))
+
+(defun fussy--get-index-from-orderless-match-property (pos str)
+  (when-let ((props (get-text-property pos 'face str)))
+    (let ((props (if (listp props) props (list props))))
+      (mapcar (lambda (prop)
+		(string-to-number
+		 (string-remove-prefix "orderless-match-face-" (symbol-name prop))))
+	      props))))
+
+(defun fussy--query-indices-in-orderless-completion (str)
+  (delete-dups
+   (reverse
+    (named-let collect-props ((indices nil)
+			      (pos 0))
+      (if (not pos)
+	  indices
+	(let ((new-pos (next-property-change pos str))
+	      (new-indices (append (fussy--get-index-from-orderless-match-property pos str) indices)))
+	  (collect-props new-indices new-pos)))))))
+
 (defun fussy-score (candidates string &optional cache)
   "Score and propertize CANDIDATES using STRING.
 
@@ -614,7 +637,7 @@ Set a text-property \='completion-score on candidates with their score.
         (let ((score (funcall fussy-score-fn
                               x
                               (if (fussy--orderless-p)
-                                  (replace-regexp-in-string "\\\s" "" string)
+                                  (fussy--merge-query-for-scoring string x)
                                 string)
                               cache)))
           ;; (message
