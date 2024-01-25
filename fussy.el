@@ -597,12 +597,19 @@ Implement `all-completions' interface with additional fuzzy / `flx' scoring."
 ;; (@* "Scoring & Highlighting" )
 ;;
 
+(defun fussy--ensure-list (x)
+  (if (listp x) x (list x)))
+
 (defun fussy--collect-orderless-matches (str)
-  (let ((matches nil))
-    (dotimes (i (length str))
-     (when (get-text-property i 'face str)
-       (push (substring str i (1+ i)) matches)))
-    (apply 'concat (reverse matches))))
+  (downcase
+   (let ((matches nil))
+     (dotimes (i (length str))
+       (when-let ((faces (fussy--ensure-list (get-text-property i 'face str)))
+		  (orderless-face-p (seq-find (lambda (face)
+						(string-match-p "\\`orderless-match-face-" (symbol-name face)))
+					      faces)))
+	 (push (substring str i (1+ i)) matches)))
+     (apply 'concat (reverse matches)))))
 
 (defun fussy-score (candidates string &optional cache)
   "Score and propertize CANDIDATES using STRING.
